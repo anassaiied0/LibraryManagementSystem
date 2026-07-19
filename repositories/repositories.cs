@@ -1,4 +1,5 @@
 ﻿using LibraryManagementSystem.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -40,6 +41,55 @@ namespace LibraryManagementSystem.Repositories
                 existing.FullName = member.FullName;
                 existing.Email = member.Email;
                 existing.PhoneNumber = member.PhoneNumber;
+            }
+        }
+    }
+
+    public class BookRepository
+    {
+        private List<Book> books = new List<Book>();
+
+        public void Add(Book book)
+        {
+            books.Add(book);
+        }
+
+        public List<Book> GetAll()
+        {
+            return books;
+        }
+
+        public Book? GetById(int id)
+        {
+            return books.FirstOrDefault(x => x.Id == id);
+        }
+
+        public Book? GetByTitle(string title)
+        {
+            return books.FirstOrDefault(
+                x => x.Title.Equals(title, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public void Delete(int id)
+        {
+            var book = GetById(id);
+
+            if (book != null)
+                books.Remove(book);
+        }
+
+        public void Update(Book book)
+        {
+            var existing = GetById(book.Id);
+
+            if (existing != null)
+            {
+                existing.Title = book.Title;
+                existing.Author = book.Author;
+                existing.ISBN = book.ISBN;
+                existing.PublicationYear = book.PublicationYear;
+                existing.Category = book.Category;
+                existing.IsAvailable = book.IsAvailable;
             }
         }
     }

@@ -33,4 +33,39 @@ namespace LibraryManagementSystem.Services
             repository.Update(member);
         }
     }
+
+    public class BookService
+    {
+        private BookRepository repository = new BookRepository();
+
+        public void Add(Book book)
+        {
+            repository.Add(book);
+        }
+
+        public List<Book> GetBooks()
+        {
+            return repository.GetAll();
+        }
+
+        public Book? Search(int id)
+        {
+            return repository.GetById(id);
+        }
+
+        public Book? Search(string title)
+        {
+            return repository.GetByTitle(title);
+        }
+
+        public void Delete(int id)
+        {
+            repository.Delete(id);
+        }
+
+        public void Update(Book book)
+        {
+            repository.Update(book);
+        }
+    }
 }
