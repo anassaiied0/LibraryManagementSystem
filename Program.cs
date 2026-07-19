@@ -3,8 +3,11 @@ using LibraryManagementSystem.Services;
 
 MemberService memberService = new MemberService();
 BookService bookService = new BookService();
+BorrowingService borrowingService = new BorrowingService(
+    memberService, bookService);
 
 bool exit = false;
+
 
 
 int ReadInt(string prompt)
@@ -74,9 +77,6 @@ void DisplayBook(Book book)
     Console.WriteLine("-------------------------");
 }
 
-// ========================================================
-// Book Methods
-// ========================================================
 
 void AddBook()
 {
@@ -255,6 +255,7 @@ void SearchBook()
     DisplayBook(book);
 }
 
+
 void RegisterMember()
 {
     Console.WriteLine("Register Member");
@@ -373,22 +374,66 @@ void ListMembers()
     }
 }
 
+void SearchMember()
+{
+    Console.WriteLine("Search Member");
+    Console.WriteLine("-------------");
+
+    int id = ReadInt("Enter Member Id: ");
+
+    Member? member = memberService.Search(id);
+
+    if (member == null)
+    {
+        Console.WriteLine("Member not found.");
+        return;
+    }
+
+    Console.WriteLine("-------------------------");
+    Console.WriteLine($"Id: {member.Id}");
+    Console.WriteLine($"Name: {member.FullName}");
+    Console.WriteLine($"Email: {member.Email}");
+    Console.WriteLine($"Phone: {member.PhoneNumber}");
+    Console.WriteLine("-------------------------");
+}
+
+
 
 void BorrowBook()
 {
     Console.WriteLine("Borrow Book");
-    Console.WriteLine("Borrowing service is not connected yet.");
+    Console.WriteLine("-----------");
+
+    int memberId = ReadInt("Enter Member Id: ");
+    int bookId = ReadInt("Enter Book Id: ");
+
+    BorrowRecord borrowRecord =
+        borrowingService.BorrowBook(memberId, bookId);
+
+    Console.WriteLine("Book borrowed successfully.");
+    Console.WriteLine($"Member: {borrowRecord.Member.FullName}");
+    Console.WriteLine($"Book: {borrowRecord.Book.Title}");
+    Console.WriteLine(
+        $"Borrow Date: {borrowRecord.BorrowDate:g}");
 }
 
 void ReturnBook()
 {
     Console.WriteLine("Return Book");
-    Console.WriteLine("Borrowing service is not connected yet.");
+    Console.WriteLine("-----------");
+
+    int bookId = ReadInt("Enter Book Id: ");
+
+    BorrowRecord borrowRecord =
+        borrowingService.ReturnBook(bookId);
+
+    Console.WriteLine("Book returned successfully.");
+    Console.WriteLine($"Member: {borrowRecord.Member.FullName}");
+    Console.WriteLine($"Book: {borrowRecord.Book.Title}");
+    Console.WriteLine(
+        $"Return Date: {borrowRecord.ReturnDate:g}");
 }
 
-// ========================================================
-// Console Menu
-// ========================================================
 
 void DisplayMenu()
 {
@@ -406,15 +451,14 @@ void DisplayMenu()
     Console.WriteLine("7.  Update Member");
     Console.WriteLine("8.  Delete Member");
     Console.WriteLine("9.  List Members");
-    Console.WriteLine("10. Borrow Book");
-    Console.WriteLine("11. Return Book");
-    Console.WriteLine("12. Exit");
+    Console.WriteLine("10. Search Member");
+    Console.WriteLine("11. Borrow Book");
+    Console.WriteLine("12. Return Book");
+    Console.WriteLine("13. Exit");
     Console.WriteLine("=================================");
 }
 
-// ========================================================
-// Main Program Loop
-// ========================================================
+
 
 while (!exit)
 {
@@ -465,21 +509,25 @@ while (!exit)
                 break;
 
             case 10:
-                BorrowBook();
+                SearchMember();
                 break;
 
             case 11:
-                ReturnBook();
+                BorrowBook();
                 break;
 
             case 12:
+                ReturnBook();
+                break;
+
+            case 13:
                 exit = true;
                 Console.WriteLine("Exiting Library Management System.");
                 break;
 
             default:
                 Console.WriteLine(
-                    "Invalid option. Please choose a number from 1 to 12.");
+                    "Invalid option. Please choose a number from 1 to 13.");
                 break;
         }
     }

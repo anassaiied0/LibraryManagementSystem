@@ -27,4 +27,17 @@
 
         public bool IsAvailable { get; set; } = true;
     }
+
+    public class BorrowRecord
+    {
+        public int Id { get; set; }
+
+        public Member Member { get; set; } = null!;
+
+        public Book Book { get; set; } = null!;
+
+        public System.DateTime BorrowDate { get; set; }
+
+        public System.DateTime? ReturnDate { get; set; }
+    }
 }

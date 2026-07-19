@@ -93,4 +93,33 @@ namespace LibraryManagementSystem.Repositories
             }
         }
     }
+
+    public class BorrowingRepository
+    {
+        private List<BorrowRecord> records = new List<BorrowRecord>();
+
+        public void Add(BorrowRecord record)
+        {
+            records.Add(record);
+        }
+
+        public List<BorrowRecord> GetAll()
+        {
+            return records;
+        }
+
+        public BorrowRecord? GetActiveByBookId(int bookId)
+        {
+            return records.FirstOrDefault(r => r.Book.Id == bookId && r.ReturnDate == null);
+        }
+
+        public void Update(BorrowRecord record)
+        {
+            var existing = records.FirstOrDefault(r => r.Id == record.Id);
+            if (existing != null)
+            {
+                existing.ReturnDate = record.ReturnDate;
+            }
+        }
+    }
 }
