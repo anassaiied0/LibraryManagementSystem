@@ -1,150 +1,214 @@
 ﻿using LibraryManagementSystem.Models;
 using LibraryManagementSystem.Repositories;
-using System;
-using System.Collections.Generic;
 
 namespace LibraryManagementSystem.Services
 {
-    public class MemberService
+    public class DepartmentService
     {
-        private MemberRepository repository = new MemberRepository();
+        private readonly DepartmentRepository _repository;
 
-        public void Register(Member member)
+        public DepartmentService(DepartmentRepository repository)
         {
-            repository.Add(member);
+            _repository = repository;
         }
 
-        public List<Member> GetMembers()
+        public void Add(Department department)
         {
-            return repository.GetAll();
+            _repository.Add(department);
         }
 
-        public Member? Search(int id)
+        public List<Department> GetAll()
         {
-            return repository.GetById(id);
+            return _repository.GetAll();
+        }
+
+        public Department? GetById(int id)
+        {
+            return _repository.GetById(id);
+        }
+
+        public void Update(Department department)
+        {
+            _repository.Update(department);
         }
 
         public void Delete(int id)
         {
-            repository.Delete(id);
+            _repository.Delete(id);
+        }
+    }
+
+    public class EmployeeService
+    {
+        private readonly EmployeeRepository _employeeRepository;
+        private readonly DepartmentRepository _departmentRepository;
+
+        public EmployeeService(EmployeeRepository employeeRepository, DepartmentRepository departmentRepository)
+        {
+            _employeeRepository = employeeRepository;
+            _departmentRepository = departmentRepository;
         }
 
-        public void Update(Member member)
+        public void Add(Employee employee)
         {
-            repository.Update(member);
+            ValidateEmployee(employee);
+            _employeeRepository.Add(employee);
         }
+
+        public void Update(Employee employee)
+        {
+            ValidateEmployee(employee);
+            _employeeRepository.Update(employee);
+        }
+
+        public List<Employee> GetAll()
+        {
+            return _employeeRepository.GetAll();
+        }
+
+        public Employee? GetById(int id)
+        {
+            return _employeeRepository.GetById(id);
+        }
+
+        public void Delete(int id)
+        {
+            _employeeRepository.Delete(id);
+        }
+
+        public List<Employee> GetByDepartment(int departmentId)
+        {
+            return _employeeRepository.GetByDepartment(departmentId);
+        }
+
+        public List<Employee> GetActive()
+        {
+            return _employeeRepository.GetActive();
+        }
+
+        public List<Employee> GetByHireDate(DateTime date)
+        {
+            return _employeeRepository.GetByHireDate(date);
+        }
+
+        public List<Employee> GetOrderedBySalary()
+        {
+            return _employeeRepository.GetOrderedBySalary();
+        }
+
+        public List<Employee> Search(int? id, string? firstName, string? lastName, int? departmentId, string? jobTitle)
+        {
+            return _employeeRepository.Search(id, firstName, lastName, departmentId, jobTitle);
+        }
+
+        private void ValidateEmployee(Employee employee)
+        {
+            if (employee.Salary <= 0)
+            {
+                throw new InvalidOperationException("Salary must be greater than zero.");
+            }
+
+            if (_departmentRepository.GetById(employee.DepartmentId) == null)
+            {
+                throw new InvalidOperationException("Employee must belong to an existing department.");
+            }
+
+            var existingEmployee = _employeeRepository.GetAll()
+                .FirstOrDefault(e => e.Email == employee.Email && e.Id != employee.Id);
+
+            if (existingEmployee != null)
+            {
+                throw new InvalidOperationException("Email must be unique.");
+            }
+        }
+    }
+
+    public class MemberService
+    {
+        private readonly MemberRepository _repository;
+
+        public MemberService(MemberRepository repository)
+        {
+            _repository = repository;
+        }
+
+        public void Register(Member member) => _repository.Add(member);
+        public List<Member> GetMembers() => _repository.GetAll();
+        public Member? Search(int id) => _repository.GetById(id);
+        public void Delete(int id) => _repository.Delete(id);
+        public void Update(Member member) => _repository.Update(member);
     }
 
     public class BookService
     {
-        private BookRepository repository = new BookRepository();
+        private readonly BookRepository _repository;
 
-        public void Add(Book book)
+        public BookService(BookRepository repository)
         {
-            repository.Add(book);
+            _repository = repository;
         }
 
-        public List<Book> GetBooks()
-        {
-            return repository.GetAll();
-        }
-
-        public Book? Search(int id)
-        {
-            return repository.GetById(id);
-        }
-
-        public Book? Search(string title)
-        {
-            return repository.GetByTitle(title);
-        }
-
-        public void Delete(int id)
-        {
-            repository.Delete(id);
-        }
-
-        public void Update(Book book)
-        {
-            repository.Update(book);
-        }
+        public void Add(Book book) => _repository.Add(book);
+        public List<Book> GetBooks() => _repository.GetAll();
+        public Book? Search(int id) => _repository.GetById(id);
+        public Book? Search(string title) => _repository.GetByTitle(title);
+        public void Delete(int id) => _repository.Delete(id);
+        public void Update(Book book) => _repository.Update(book);
     }
 
     public class BorrowingService
     {
-        private BorrowingRepository repository = new BorrowingRepository();
-        private MemberService memberService;
-        private BookService bookService;
-        private int nextBorrowRecordId = 1;
+        private readonly BorrowingRepository _repository;
+        private readonly MemberService _memberService;
+        private readonly BookService _bookService;
 
-        public BorrowingService(
-            MemberService memberService,
-            BookService bookService)
+        public BorrowingService(BorrowingRepository repository, MemberService memberService, BookService bookService)
         {
-            this.memberService = memberService;
-            this.bookService = bookService;
+            _repository = repository;
+            _memberService = memberService;
+            _bookService = bookService;
         }
 
         public BorrowRecord BorrowBook(int memberId, int bookId)
         {
-            Member? member = memberService.Search(memberId);
+            var member = _memberService.Search(memberId) ?? throw new InvalidOperationException("Member not found.");
+            var book = _bookService.Search(bookId) ?? throw new InvalidOperationException("Book not found.");
 
-            if (member == null)
-                throw new InvalidOperationException("Member not found.");
+            if (!book.IsAvailable) throw new InvalidOperationException("This book is already borrowed.");
 
-            Book? book = bookService.Search(bookId);
-
-            if (book == null)
-                throw new InvalidOperationException("Book not found.");
-
-            if (!book.IsAvailable)
-                throw new InvalidOperationException(
-                    "This book is already borrowed.");
-
-            BorrowRecord borrowRecord = new BorrowRecord
+            var borrowRecord = new BorrowRecord
             {
-                Id = nextBorrowRecordId,
-                Member = member,
-                Book = book,
+                MemberId = member.Id,
+                BookId = book.Id,
                 BorrowDate = DateTime.Now,
                 ReturnDate = null
             };
 
-            nextBorrowRecordId++;
-            repository.Add(borrowRecord);
+            _repository.Add(borrowRecord);
 
             book.IsAvailable = false;
-            bookService.Update(book);
+            _bookService.Update(book);
 
             return borrowRecord;
         }
 
         public BorrowRecord ReturnBook(int bookId)
         {
-            Book? book = bookService.Search(bookId);
-
-            if (book == null)
-                throw new InvalidOperationException("Book not found.");
-
-            BorrowRecord? borrowRecord =
-                repository.GetActiveByBookId(bookId);
-
-            if (borrowRecord == null)
-                throw new InvalidOperationException(
-                    "This book is not currently borrowed.");
+            var book = _bookService.Search(bookId) ?? throw new InvalidOperationException("Book not found.");
+            var borrowRecord = _repository.GetActiveByBookId(bookId) ?? throw new InvalidOperationException("This book is not currently borrowed.");
 
             borrowRecord.ReturnDate = DateTime.Now;
-            repository.Update(borrowRecord);
+            _repository.Update(borrowRecord);
 
             book.IsAvailable = true;
-            bookService.Update(book);
+            _bookService.Update(book);
 
             return borrowRecord;
         }
 
         public List<BorrowRecord> GetBorrowRecords()
         {
-            return repository.GetAll();
+            return _repository.GetAll();
         }
     }
 }

@@ -1,28 +1,257 @@
-﻿using LibraryManagementSystem.Models;
+﻿using LibraryManagementSystem.Data;
+using LibraryManagementSystem.Models;
+using LibraryManagementSystem.Repositories;
 using LibraryManagementSystem.Services;
 
-MemberService memberService = new MemberService();
-BookService bookService = new BookService();
-BorrowingService borrowingService = new BorrowingService(
-    memberService, bookService);
+var context = new AppDbContext();
+
+var departmentRepo = new DepartmentRepository(context);
+var employeeRepo = new EmployeeRepository(context);
+var memberRepo = new MemberRepository(context);
+var bookRepo = new BookRepository(context);
+var borrowingRepo = new BorrowingRepository(context);
+
+var departmentService = new DepartmentService(departmentRepo);
+var employeeService = new EmployeeService(employeeRepo, departmentRepo);
+var memberService = new MemberService(memberRepo);
+var bookService = new BookService(bookRepo);
+var borrowingService = new BorrowingService(borrowingRepo, memberService, bookService);
 
 bool exit = false;
 
+while (!exit)
+{
+    Console.Clear();
+    Console.WriteLine("============================");
+    Console.WriteLine("Employee Management System");
+    Console.WriteLine("============================");
+    Console.WriteLine("1. Add Department");
+    Console.WriteLine("2. List Departments");
+    Console.WriteLine("3. Update Department");
+    Console.WriteLine("4. Delete Department");
+    Console.WriteLine("5. Add Employee");
+    Console.WriteLine("6. List Employees");
+    Console.WriteLine("7. Search Employee");
+    Console.WriteLine("8. Update Employee");
+    Console.WriteLine("9. Delete Employee");
+    Console.WriteLine("10. Employees By Department");
+    Console.WriteLine("11. Active Employees");
+    Console.WriteLine("12. Employees By Hire Date");
+    Console.WriteLine("13. Employees Ordered By Salary");
+    Console.WriteLine("14. Exit");
+    Console.WriteLine("============================");
 
+    int choice = ReadInt("Choose an option: ");
+    Console.WriteLine();
+
+    try
+    {
+        switch (choice)
+        {
+            case 1: AddDepartment(); break;
+            case 2: ListDepartments(); break;
+            case 3: UpdateDepartment(); break;
+            case 4: DeleteDepartment(); break;
+            case 5: AddEmployee(); break;
+            case 6: ListEmployees(); break;
+            case 7: SearchEmployee(); break;
+            case 8: UpdateEmployee(); break;
+            case 9: DeleteEmployee(); break;
+            case 10: EmployeesByDepartment(); break;
+            case 11: ActiveEmployees(); break;
+            case 12: EmployeesByHireDate(); break;
+            case 13: EmployeesOrderedBySalary(); break;
+            case 14: exit = true; break;
+            default: Console.WriteLine("Invalid option."); break;
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error: {ex.Message}");
+    }
+
+    if (!exit)
+    {
+        Console.WriteLine("\nPress Enter to return to the menu...");
+        Console.ReadLine();
+    }
+}
+
+void AddDepartment()
+{
+    string name = ReadRequiredString("Department Name: ");
+    string description = ReadString("Description (optional): ");
+
+    departmentService.Add(new Department { Name = name, Description = description });
+    Console.WriteLine("Department added successfully.");
+}
+
+void ListDepartments()
+{
+    var departments = departmentService.GetAll();
+    if (!departments.Any()) { Console.WriteLine("No departments found."); return; }
+
+    foreach (var dept in departments)
+    {
+        Console.WriteLine($"ID: {dept.Id} | Name: {dept.Name} | Description: {dept.Description}");
+    }
+}
+
+void UpdateDepartment()
+{
+    int id = ReadInt("Department ID: ");
+    var dept = departmentService.GetById(id) ?? throw new InvalidOperationException("Department not found.");
+
+    dept.Name = ReadRequiredString($"New Name ({dept.Name}): ");
+    dept.Description = ReadString($"New Description ({dept.Description}): ");
+
+    departmentService.Update(dept);
+    Console.WriteLine("Department updated successfully.");
+}
+
+void DeleteDepartment()
+{
+    int id = ReadInt("Department ID to delete: ");
+    departmentService.Delete(id);
+    Console.WriteLine("Department deleted successfully.");
+}
+
+void AddEmployee()
+{
+    var employee = new Employee
+    {
+        FirstName = ReadRequiredString("First Name: "),
+        LastName = ReadRequiredString("Last Name: "),
+        Email = ReadRequiredString("Email: "),
+        Salary = ReadDecimal("Salary: "),
+        JobTitle = ReadRequiredString("Job Title: "),
+        HireDate = ReadDate("Hire Date (yyyy-mm-dd): "),
+        DepartmentId = ReadInt("Department ID: ")
+    };
+
+    employeeService.Add(employee);
+    Console.WriteLine("Employee added successfully.");
+}
+
+void ListEmployees()
+{
+    var employees = employeeService.GetAll();
+    if (!employees.Any()) { Console.WriteLine("No employees found."); return; }
+
+    foreach (var emp in employees) DisplayEmployee(emp);
+}
+
+void SearchEmployee()
+{
+    Console.WriteLine("Search by (leave blank to skip):");
+    int? id = ReadOptionalInt("Employee ID: ");
+    string? firstName = ReadOptionalString("First Name: ");
+    string? lastName = ReadOptionalString("Last Name: ");
+    int? deptId = ReadOptionalInt("Department ID: ");
+    string? jobTitle = ReadOptionalString("Job Title: ");
+
+    var results = employeeService.Search(id, firstName, lastName, deptId, jobTitle);
+
+    if (!results.Any()) { Console.WriteLine("No employees found matching criteria."); return; }
+    foreach (var emp in results) DisplayEmployee(emp);
+}
+
+void UpdateEmployee()
+{
+    int id = ReadInt("Employee ID: ");
+    var emp = employeeService.GetById(id) ?? throw new InvalidOperationException("Employee not found.");
+
+    emp.FirstName = ReadRequiredString($"First Name ({emp.FirstName}): ");
+    emp.LastName = ReadRequiredString($"Last Name ({emp.LastName}): ");
+    emp.Email = ReadRequiredString($"Email ({emp.Email}): ");
+    emp.Salary = ReadDecimal($"Salary ({emp.Salary}): ");
+    emp.JobTitle = ReadRequiredString($"Job Title ({emp.JobTitle}): ");
+    emp.DepartmentId = ReadInt($"Department ID ({emp.DepartmentId}): ");
+
+    employeeService.Update(emp);
+    Console.WriteLine("Employee updated successfully.");
+}
+
+void DeleteEmployee()
+{
+    int id = ReadInt("Employee ID to delete: ");
+    employeeService.Delete(id);
+    Console.WriteLine("Employee deleted successfully.");
+}
+
+void EmployeesByDepartment()
+{
+    int deptId = ReadInt("Department ID: ");
+    var employees = employeeService.GetByDepartment(deptId);
+    if (!employees.Any()) { Console.WriteLine("No employees in this department."); return; }
+    foreach (var emp in employees) DisplayEmployee(emp);
+}
+
+void ActiveEmployees()
+{
+    var employees = employeeService.GetActive();
+    if (!employees.Any()) { Console.WriteLine("No active employees found."); return; }
+    foreach (var emp in employees) DisplayEmployee(emp);
+}
+
+void EmployeesByHireDate()
+{
+    DateTime date = ReadDate("Hire Date (yyyy-mm-dd): ");
+    var employees = employeeService.GetByHireDate(date);
+    if (!employees.Any()) { Console.WriteLine("No employees hired on this date."); return; }
+    foreach (var emp in employees) DisplayEmployee(emp);
+}
+
+void EmployeesOrderedBySalary()
+{
+    var employees = employeeService.GetOrderedBySalary();
+    if (!employees.Any()) { Console.WriteLine("No employees found."); return; }
+    foreach (var emp in employees) DisplayEmployee(emp);
+}
+
+void DisplayEmployee(Employee emp)
+{
+    Console.WriteLine($"-----------------------------------");
+    Console.WriteLine($"ID: {emp.Id} | Name: {emp.FirstName} {emp.LastName}");
+    Console.WriteLine($"Email: {emp.Email} | Job: {emp.JobTitle}");
+    Console.WriteLine($"Salary: {emp.Salary:C} | Hired: {emp.HireDate:d}");
+    Console.WriteLine($"Department: {emp.Department?.Name} | Active: {emp.IsActive}");
+}
 
 int ReadInt(string prompt)
 {
     while (true)
     {
         Console.Write(prompt);
-        string? input = Console.ReadLine();
-
-        if (int.TryParse(input, out int value))
-        {
-            return value;
-        }
-
+        if (int.TryParse(Console.ReadLine(), out int value)) return value;
         Console.WriteLine("Invalid number. Please try again.");
+    }
+}
+
+int? ReadOptionalInt(string prompt)
+{
+    Console.Write(prompt);
+    string? input = Console.ReadLine();
+    return int.TryParse(input, out int value) ? value : null;
+}
+
+decimal ReadDecimal(string prompt)
+{
+    while (true)
+    {
+        Console.Write(prompt);
+        if (decimal.TryParse(Console.ReadLine(), out decimal value)) return value;
+        Console.WriteLine("Invalid number. Please try again.");
+    }
+}
+
+DateTime ReadDate(string prompt)
+{
+    while (true)
+    {
+        Console.Write(prompt);
+        if (DateTime.TryParse(Console.ReadLine(), out DateTime value)) return value;
+        Console.WriteLine("Invalid date. Please try again (YYYY-MM-DD).");
     }
 }
 
@@ -32,514 +261,19 @@ string ReadString(string prompt)
     return Console.ReadLine() ?? string.Empty;
 }
 
+string? ReadOptionalString(string prompt)
+{
+    Console.Write(prompt);
+    string? input = Console.ReadLine();
+    return string.IsNullOrWhiteSpace(input) ? null : input;
+}
+
 string ReadRequiredString(string prompt)
 {
     while (true)
     {
         string value = ReadString(prompt);
-
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            return value;
-        }
-
+        if (!string.IsNullOrWhiteSpace(value)) return value;
         Console.WriteLine("This field cannot be empty.");
-    }
-}
-
-int ReadPublicationYear(string prompt)
-{
-    while (true)
-    {
-        int year = ReadInt(prompt);
-
-        if (year > 0 && year <= DateTime.Now.Year)
-        {
-            return year;
-        }
-
-        Console.WriteLine(
-            $"Publication year must be between 1 and {DateTime.Now.Year}.");
-    }
-}
-
-void DisplayBook(Book book)
-{
-    Console.WriteLine("-------------------------");
-    Console.WriteLine($"Id: {book.Id}");
-    Console.WriteLine($"Title: {book.Title}");
-    Console.WriteLine($"Author: {book.Author}");
-    Console.WriteLine($"ISBN: {book.ISBN}");
-    Console.WriteLine($"Publication Year: {book.PublicationYear}");
-    Console.WriteLine($"Category: {book.Category}");
-    Console.WriteLine(
-        $"Availability: {(book.IsAvailable ? "Available" : "Borrowed")}");
-    Console.WriteLine("-------------------------");
-}
-
-
-void AddBook()
-{
-    Console.WriteLine("Add Book");
-    Console.WriteLine("--------");
-
-    int id = ReadInt("Id: ");
-
-    if (bookService.Search(id) != null)
-    {
-        Console.WriteLine("A book with this Id already exists.");
-        return;
-    }
-
-    string title = ReadRequiredString("Title: ");
-    string author = ReadRequiredString("Author: ");
-    string isbn = ReadRequiredString("ISBN: ");
-    int publicationYear = ReadPublicationYear("Publication Year: ");
-    string category = ReadRequiredString("Category: ");
-
-    Book book = new Book
-    {
-        Id = id,
-        Title = title,
-        Author = author,
-        ISBN = isbn,
-        PublicationYear = publicationYear,
-        Category = category,
-        IsAvailable = true
-    };
-
-    bookService.Add(book);
-
-    Console.WriteLine("Book added successfully.");
-}
-
-void UpdateBook()
-{
-    Console.WriteLine("Update Book");
-    Console.WriteLine("-----------");
-
-    int id = ReadInt("Enter Book Id: ");
-
-    Book? existingBook = bookService.Search(id);
-
-    if (existingBook == null)
-    {
-        Console.WriteLine("Book not found.");
-        return;
-    }
-
-    string newTitle =
-        ReadString("Enter New Title (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newTitle))
-    {
-        existingBook.Title = newTitle;
-    }
-
-    string newAuthor =
-        ReadString("Enter New Author (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newAuthor))
-    {
-        existingBook.Author = newAuthor;
-    }
-
-    string newIsbn =
-        ReadString("Enter New ISBN (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newIsbn))
-    {
-        existingBook.ISBN = newIsbn;
-    }
-
-    string newYear =
-        ReadString("Enter New Publication Year (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newYear))
-    {
-        if (!int.TryParse(newYear, out int year) ||
-            year <= 0 ||
-            year > DateTime.Now.Year)
-        {
-            Console.WriteLine("Invalid publication year.");
-            return;
-        }
-
-        existingBook.PublicationYear = year;
-    }
-
-    string newCategory =
-        ReadString("Enter New Category (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newCategory))
-    {
-        existingBook.Category = newCategory;
-    }
-
-    bookService.Update(existingBook);
-
-    Console.WriteLine("Book updated successfully.");
-}
-
-void DeleteBook()
-{
-    Console.WriteLine("Delete Book");
-    Console.WriteLine("-----------");
-
-    int id = ReadInt("Enter Book Id: ");
-
-    Book? existingBook = bookService.Search(id);
-
-    if (existingBook == null)
-    {
-        Console.WriteLine("Book not found.");
-        return;
-    }
-
-    bookService.Delete(id);
-
-    Console.WriteLine("Book deleted successfully.");
-}
-
-void ListBooks()
-{
-    Console.WriteLine("List Books");
-    Console.WriteLine("----------");
-
-    var books = bookService.GetBooks();
-
-    if (books.Count == 0)
-    {
-        Console.WriteLine("No books found.");
-        return;
-    }
-
-    foreach (Book book in books)
-    {
-        DisplayBook(book);
-    }
-}
-
-void SearchBook()
-{
-    Console.WriteLine("Search Book");
-    Console.WriteLine("-----------");
-    Console.WriteLine("1. Search by Id");
-    Console.WriteLine("2. Search by Title");
-
-    int searchChoice = ReadInt("Choose search type: ");
-    Book? book;
-
-    if (searchChoice == 1)
-    {
-        int id = ReadInt("Enter Book Id: ");
-        book = bookService.Search(id);
-    }
-    else if (searchChoice == 2)
-    {
-        string title = ReadRequiredString("Enter Book Title: ");
-        book = bookService.Search(title);
-    }
-    else
-    {
-        Console.WriteLine("Invalid search option.");
-        return;
-    }
-
-    if (book == null)
-    {
-        Console.WriteLine("Book not found.");
-        return;
-    }
-
-    DisplayBook(book);
-}
-
-
-void RegisterMember()
-{
-    Console.WriteLine("Register Member");
-    Console.WriteLine("---------------");
-
-    int id = ReadInt("Id: ");
-
-    if (memberService.Search(id) != null)
-    {
-        Console.WriteLine("A member with this Id already exists.");
-        return;
-    }
-
-    string name = ReadRequiredString("Name: ");
-    string email = ReadRequiredString("Email: ");
-    string phone = ReadRequiredString("Phone: ");
-
-    Member member = new Member
-    {
-        Id = id,
-        FullName = name,
-        Email = email,
-        PhoneNumber = phone
-    };
-
-    memberService.Register(member);
-
-    Console.WriteLine("Member added successfully.");
-}
-
-void UpdateMember()
-{
-    Console.WriteLine("Update Member");
-    Console.WriteLine("-------------");
-
-    int id = ReadInt("Enter Member Id: ");
-
-    Member? existingMember = memberService.Search(id);
-
-    if (existingMember == null)
-    {
-        Console.WriteLine("Member not found.");
-        return;
-    }
-
-    string newName =
-        ReadString("Enter New Name (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newName))
-    {
-        existingMember.FullName = newName;
-    }
-
-    string newEmail =
-        ReadString("Enter New Email (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newEmail))
-    {
-        existingMember.Email = newEmail;
-    }
-
-    string newPhone =
-        ReadString("Enter New Phone (leave blank to keep current): ");
-
-    if (!string.IsNullOrWhiteSpace(newPhone))
-    {
-        existingMember.PhoneNumber = newPhone;
-    }
-
-    memberService.Update(existingMember);
-
-    Console.WriteLine("Member updated successfully.");
-}
-
-void DeleteMember()
-{
-    Console.WriteLine("Delete Member");
-    Console.WriteLine("-------------");
-
-    int id = ReadInt("Enter Member Id: ");
-
-    Member? existingMember = memberService.Search(id);
-
-    if (existingMember == null)
-    {
-        Console.WriteLine("Member not found.");
-        return;
-    }
-
-    memberService.Delete(id);
-
-    Console.WriteLine("Member deleted successfully.");
-}
-
-void ListMembers()
-{
-    Console.WriteLine("List Members");
-    Console.WriteLine("------------");
-
-    var members = memberService.GetMembers();
-
-    if (members.Count == 0)
-    {
-        Console.WriteLine("No members found.");
-        return;
-    }
-
-    foreach (Member member in members)
-    {
-        Console.WriteLine("-------------------------");
-        Console.WriteLine($"Id: {member.Id}");
-        Console.WriteLine($"Name: {member.FullName}");
-        Console.WriteLine($"Email: {member.Email}");
-        Console.WriteLine($"Phone: {member.PhoneNumber}");
-        Console.WriteLine("-------------------------");
-    }
-}
-
-void SearchMember()
-{
-    Console.WriteLine("Search Member");
-    Console.WriteLine("-------------");
-
-    int id = ReadInt("Enter Member Id: ");
-
-    Member? member = memberService.Search(id);
-
-    if (member == null)
-    {
-        Console.WriteLine("Member not found.");
-        return;
-    }
-
-    Console.WriteLine("-------------------------");
-    Console.WriteLine($"Id: {member.Id}");
-    Console.WriteLine($"Name: {member.FullName}");
-    Console.WriteLine($"Email: {member.Email}");
-    Console.WriteLine($"Phone: {member.PhoneNumber}");
-    Console.WriteLine("-------------------------");
-}
-
-
-
-void BorrowBook()
-{
-    Console.WriteLine("Borrow Book");
-    Console.WriteLine("-----------");
-
-    int memberId = ReadInt("Enter Member Id: ");
-    int bookId = ReadInt("Enter Book Id: ");
-
-    BorrowRecord borrowRecord =
-        borrowingService.BorrowBook(memberId, bookId);
-
-    Console.WriteLine("Book borrowed successfully.");
-    Console.WriteLine($"Member: {borrowRecord.Member.FullName}");
-    Console.WriteLine($"Book: {borrowRecord.Book.Title}");
-    Console.WriteLine(
-        $"Borrow Date: {borrowRecord.BorrowDate:g}");
-}
-
-void ReturnBook()
-{
-    Console.WriteLine("Return Book");
-    Console.WriteLine("-----------");
-
-    int bookId = ReadInt("Enter Book Id: ");
-
-    BorrowRecord borrowRecord =
-        borrowingService.ReturnBook(bookId);
-
-    Console.WriteLine("Book returned successfully.");
-    Console.WriteLine($"Member: {borrowRecord.Member.FullName}");
-    Console.WriteLine($"Book: {borrowRecord.Book.Title}");
-    Console.WriteLine(
-        $"Return Date: {borrowRecord.ReturnDate:g}");
-}
-
-
-void DisplayMenu()
-{
-    Console.Clear();
-
-    Console.WriteLine("=================================");
-    Console.WriteLine("    Library Management System");
-    Console.WriteLine("=================================");
-    Console.WriteLine("1.  Add Book");
-    Console.WriteLine("2.  Update Book");
-    Console.WriteLine("3.  Delete Book");
-    Console.WriteLine("4.  List Books");
-    Console.WriteLine("5.  Search Book");
-    Console.WriteLine("6.  Register Member");
-    Console.WriteLine("7.  Update Member");
-    Console.WriteLine("8.  Delete Member");
-    Console.WriteLine("9.  List Members");
-    Console.WriteLine("10. Search Member");
-    Console.WriteLine("11. Borrow Book");
-    Console.WriteLine("12. Return Book");
-    Console.WriteLine("13. Exit");
-    Console.WriteLine("=================================");
-}
-
-
-
-while (!exit)
-{
-    DisplayMenu();
-
-    int choice = ReadInt("Choose an option: ");
-
-    Console.WriteLine();
-
-    try
-    {
-        switch (choice)
-        {
-            case 1:
-                AddBook();
-                break;
-
-            case 2:
-                UpdateBook();
-                break;
-
-            case 3:
-                DeleteBook();
-                break;
-
-            case 4:
-                ListBooks();
-                break;
-
-            case 5:
-                SearchBook();
-                break;
-
-            case 6:
-                RegisterMember();
-                break;
-
-            case 7:
-                UpdateMember();
-                break;
-
-            case 8:
-                DeleteMember();
-                break;
-
-            case 9:
-                ListMembers();
-                break;
-
-            case 10:
-                SearchMember();
-                break;
-
-            case 11:
-                BorrowBook();
-                break;
-
-            case 12:
-                ReturnBook();
-                break;
-
-            case 13:
-                exit = true;
-                Console.WriteLine("Exiting Library Management System.");
-                break;
-
-            default:
-                Console.WriteLine(
-                    "Invalid option. Please choose a number from 1 to 13.");
-                break;
-        }
-    }
-    catch (Exception exception)
-    {
-        Console.WriteLine($"Error: {exception.Message}");
-    }
-
-    if (!exit)
-    {
-        Console.WriteLine();
-        Console.Write("Press Enter to return to the menu...");
-        Console.ReadLine();
     }
 }
