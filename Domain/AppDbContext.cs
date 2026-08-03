@@ -1,23 +1,23 @@
-﻿using LibraryManagementSystem.Models;
+﻿using LibraryManagementSystem.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagementSystem.Data
 {
     public class AppDbContext : DbContext
     {
-        public DbSet<Department> Departments { get; set; }
-        public DbSet<Employee> Employees { get; set; }
+        public DbSet<Department> Departments { get; set; } = null!;
+        public DbSet<Employee> Employees { get; set; } = null!;
 
-        public DbSet<Member> Members { get; set; }
-        public DbSet<Book> Books { get; set; }
-        public DbSet<BorrowRecord> BorrowRecords { get; set; }
+        public DbSet<Member> Members { get; set; } = null!;
+        public DbSet<Book> Books { get; set; } = null!;
+        public DbSet<BorrowRecord> BorrowRecords { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(
-                "Server=anassaiied;Database=LibraryManagementDb;Trusted_Connection=True;TrustServerCertificate=True;");
+            // Use LocalDB by default. Update connection string as needed.
+            optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=LibraryManagementDb;Trusted_Connection=True;");
         }
-        
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Employee>()
